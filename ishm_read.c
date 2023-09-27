@@ -44,16 +44,13 @@ int main(int argc, char *argv[]) {
     	return -1;
     }
 
-//    ishm_ipc_semset(semid, 0, 1);
-//    ishm_ipc_semset(semid, 1, 0);
-    ishm_ipc_sem_p(semid, 1);
-
     shmaddr = (char*) ish_ipc_shmmap(shmid);
-//    memset(shmaddr, 0, shmsz);
-    printf("shmaddr:%s\n", shmaddr);
-    ishm_ipc_shmunmap(shmaddr);
 
+    ishm_ipc_sem_p(semid, 1);
+    printf("shmaddr:%s\n", shmaddr);
     ishm_ipc_sem_v(semid, 0);
+
+    ishm_ipc_shmunmap(shmaddr);
     printf("quit\n");
 
 	return 0;

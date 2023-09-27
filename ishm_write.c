@@ -44,18 +44,19 @@ int main(int argc, char *argv[]) {
     	return -1;
     }
 
+    shmaddr = (char*) ish_ipc_shmmap(shmid);
     ishm_ipc_semset(semid, 0, 1);
     ishm_ipc_semset(semid, 1, 0);
+
     ishm_ipc_sem_p(semid, 0);
 
-    shmaddr = (char*) ish_ipc_shmmap(shmid);
     memset(shmaddr, 0, shmsz);
     printf("shmaddr:%lx\n", shmaddr);
-    sprintf(shmaddr, "hello world\n");
-    ishm_ipc_shmunmap(shmaddr);
-
+    sprintf(shmaddr, "hello world, I am back!");
     ishm_ipc_sem_v(semid, 1);
     ishm_ipc_sem_p(semid, 0);
+
+    ishm_ipc_shmunmap(shmaddr);
     ishm_ipc_shmdel(shmid);
     ishm_ipc_semdel(semid);
     printf("quit\n");
