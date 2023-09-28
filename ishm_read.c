@@ -1,4 +1,6 @@
 #include "ishm.h"
+#include "ipcshm.h"
+
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/sem.h>
@@ -19,7 +21,8 @@ void HandleSignal(int signo) {
     printf("ctr + c times:%d\n", sign);
 }
 
-int main(int argc, char *argv[]) {
+
+void shm_read() {
     key_t shmkey, semkey;
     int shmid = -1, semid = -1;
     char *shmaddr = NULL;
@@ -45,13 +48,48 @@ int main(int argc, char *argv[]) {
     }
 
     shmaddr = (char*) ish_ipc_shmmap(shmid);
-
-    ishm_ipc_sem_p(semid, 1);
-    printf("shmaddr:%s\n", shmaddr);
-    ishm_ipc_sem_v(semid, 0);
+    while(1) {
+    	sign = atomic_load(&sign_exit);
+    	if (sign > 0) {
+    		break;
+    	}
+	    ishm_ipc_sem_p(semid, 1);
+	    printf("shmaddr:%s\n", shmaddr);
+	    ishm_ipc_sem_v(semid, 0);
+	}
 
     ishm_ipc_shmunmap(shmaddr);
     printf("quit\n");
+}
 
+int main(int argc, char *argv[]) {
+//	shm_read();
+	void* ihandle = NULL;
+    int shmsz = 0x100000, flags = 0, recv = 0, bufsize = 256;
+	unsigned int sign = 0;
+	char buffer[256] = {0};
+    atomic_init(&sign_exit, 0);
+    // ctrl+c 捕获
+    signal(SIGINT, HandleSignal);
+    signal(SIGTERM, HandleSignal);
+	ihandle = ipcshm_alloc("/tmp/vpuipc", 0, shmsz, flags);
+	if (ihandle == NULL) {
+		printf("ipcshm_alloc wrong\n");
+		return -1;
+	}
+
+    while(1) {
+    	sign = atomic_load(&sign_exit);
+    	if (sign > 0) {
+    		break;
+    	}
+    	memset(buffer, 0, 256);
+    	bufsize = ipcshm_read(ihandle, buffer, bufsize);
+    	printf("%s - %d recv:%d times\n", buffer, bufsize, recv++);
+    	sleep(1);
+	}
+
+	ipcshm_free(ihandle);
+	printf("quit\n");
 	return 0;
 }
